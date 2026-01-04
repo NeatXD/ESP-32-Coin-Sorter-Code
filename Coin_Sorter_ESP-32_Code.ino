@@ -4,12 +4,14 @@
 //Done By Yazan Ayash
 
 //WiFi Setup code
-const char* ssid = "Totally Real SID";
-const char* password = "Totally Real Password";
+const char* ssid = "GJU_STUDENT";
+const char* password = "GJUstudent";
 
 //Initializing the Laptop Port
-IPAddress laptopIP(192, 168, 1, 19);
+IPAddress laptopIP(10, 12, 14, 43);
 const uint16_t laptopPort = 6000;
+WiFiClient client;
+
 
 //Initializing IR sensor
 #define IR_PIN 13
@@ -34,6 +36,10 @@ Servo rampServo;
 bool sent = false;
 
 void setup() {
+
+  for (int i = 0; i < 50; i++) {
+  Serial.println();
+}
   Serial.begin(115200);
   pinMode(IR_PIN, INPUT);
 
@@ -56,37 +62,56 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nESP32 connected");
+  Serial.println(WiFi.localIP());
+
 }
 
 void loop() {
+
+  // Ensure connection to laptop is always alive
+  if (!client.connected()) {
+    Serial.println("Connecting to laptop...");
+
+    while (!client.connect(laptopIP, laptopPort)) {
+      Serial.print(".");
+      delay(500);
+    }
+
+    Serial.println("\nConnected to laptop");
+  }
+
+  // Read IR sensor
   int ir = digitalRead(IR_PIN);
 
+  // Trigger only once per coin
   if (ir == DARK_LEVEL && !sent) {
-    WiFiClient client;
 
-    if (client.connect(laptopIP, laptopPort)) {
-      Serial.println("Connected to Python");
+    // Send trigger
+    client.println("TAKE_PIC");
+    Serial.println("TAKE_PIC sent");
 
-      // Sending trigger
-      client.println("TAKE_PIC");
-      Serial.println("TAKE_PIC sent");
-
-      // Waiting for a reply
-      unsigned long startTime = millis();
-      while (!client.available()) {
-        if (millis() - startTime > 8000) {
-          Serial.println("Timeout waiting for reply");
-          client.stop();
-          return;
-        }
+    // Wait for reply
+    unsigned long startTime = millis();
+    while (!client.available()) {
+      if (!client.connected()) {
+        Serial.println("Laptop disconnected!");
+        sent = false;
+        return;
       }
+      // if (millis() - startTime > 8000) {
+      //   Serial.println("Timeout waiting for reply");
+      //   return;
+      // }
+    }
 
-      // Reading the reply
-      int reply = client.parseInt();
-      Serial.print("Received reply: ");
-      Serial.println(reply);
-      
-      //Moving motors if the coin is 50 Piasters
+    int reply = client.parseInt();
+    Serial.print("Received reply: ");
+    Serial.println(reply);
+
+    // -------- Motor logic --------
+    
+
+    //Moving motors if the coin is 50 Piasters
       if (reply == 0) {
         Serial.println("Opening interior gate");
         gateServo1.write(OPEN_POS);
@@ -146,16 +171,116 @@ void loop() {
         gateServo2.write(CLOSED2_POS);
       }
 
-      // Closing the socket after the end of communication
-      client.stop();
-      sent = true;
-    }
+    sent = true;
   }
 
-  // Reset when IR is no longer triggered
+  // Reset trigger when IR clears
   if (ir != DARK_LEVEL) {
     sent = false;
   }
 
-  delay(100);
+  delay(50);
 }
+
+
+// void loop() {
+//   int ir = digitalRead(IR_PIN);
+
+//   if (ir == DARK_LEVEL && !sent) {
+//     WiFiClient client;
+
+//     if (client.connect(laptopIP, laptopPort)) {
+//       Serial.println("Connected to Python");
+
+//       // Sending trigger
+//       client.println("TAKE_PIC");
+//       Serial.println("TAKE_PIC sent");
+
+//       // Waiting for a reply
+//       unsigned long startTime = millis();
+//       while (!client.available()) {
+//         if (millis() - startTime > 8000) {
+//           Serial.println("Timeout waiting for reply");
+//           client.stop();
+//           return;
+//         }
+//       }
+
+//       // Reading the reply
+//       int reply = client.parseInt();
+//       Serial.print("Received reply: ");
+//       Serial.println(reply);
+      
+//       //Moving motors if the coin is 50 Piasters
+//       if (reply == 0) {
+//         Serial.println("Opening interior gate");
+//         gateServo1.write(OPEN_POS);
+//         delay(2000);
+//         gateServo1.write(CLOSED_POS);
+//         delay(3000);
+//         Serial.println("Moving exteerior Ramp");
+//         rampServo.write(FIFTYQ);
+//         Serial.println("Opening exterior gate");
+//         gateServo2.write(OPEN2_POS);
+//         delay(2000);
+//         gateServo2.write(CLOSED2_POS);
+//       }
+
+//       //Moving the motors if the coin is 25 Piasters
+//       if (reply == 1) {
+//         Serial.println("Opening interior gate");
+//         gateServo1.write(OPEN_POS);
+//         delay(2000);
+//         gateServo1.write(CLOSED_POS);
+//         delay(3000);
+//         Serial.println("Moving exteerior Ramp");
+//         rampServo.write(TWENTYFIVEQ);
+//         Serial.println("Opening exterior gate");
+//         gateServo2.write(OPEN2_POS);
+//         delay(2000);
+//         gateServo2.write(CLOSED2_POS);
+//       }
+
+//       //Moving the motors if the coin is 10 piasters
+//       if (reply == 2) {
+//         Serial.println("Opening interior gate");
+//         gateServo1.write(OPEN_POS);
+//         delay(2000);
+//         gateServo1.write(CLOSED_POS);
+//         delay(3000);
+//         Serial.println("Moving exteerior Ramp");
+//         rampServo.write(TENQ);
+//         Serial.println("Opening exterior gate");
+//         gateServo2.write(OPEN2_POS);
+//         delay(2000);
+//         gateServo2.write(CLOSED2_POS);
+//       }
+
+//       //Moving the motors if the coin is 5 piasters
+//       if (reply == 3) {
+//         Serial.println("Opening interior gate");
+//         gateServo1.write(OPEN_POS);
+//         delay(2000);
+//         gateServo1.write(CLOSED_POS);
+//         delay(3000);
+//         Serial.println("Moving exteerior Ramp");
+//         rampServo.write(TENQ);
+//         Serial.println("Opening exterior gate");
+//         gateServo2.write(OPEN2_POS);
+//         delay(2000);
+//         gateServo2.write(CLOSED2_POS);
+//       }
+
+//       // Closing the socket after the end of communication
+//       client.stop();
+//       sent = true;
+//     }
+//   }
+
+//   // Reset when IR is no longer triggered
+//   if (ir != DARK_LEVEL) {
+//     sent = false;
+//   }
+
+//   delay(100);
+// }

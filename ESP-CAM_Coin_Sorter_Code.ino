@@ -2,15 +2,15 @@
 #include <WiFi.h>
 //Done By Yazan Ayash
 // WiFi Setup
-const char* ssid = "Totally Real SSID";
-const char* password = "Totally Real Password";
+const char* ssid = "GJU_STUDENT";
+const char* password = "GJUstudent";
 
 // Ip Addresses
-IPAddress camIP(192, 168, 1, 29);
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 255, 0);
+IPAddress camIP(10, 1, 138, 81);
+IPAddress gateway(10, 12, 0, 1);
+IPAddress subnet(255, 255, 0, 0);
 
-IPAddress laptopIP(192, 168, 1, 19);
+IPAddress laptopIP(10, 12, 14, 43);
 #define CMD_PORT 7000
 #define IMG_PORT 8000
 
@@ -79,11 +79,14 @@ bool initCamera() {
 }
 
 void setup() {
+
+  for (int i = 0; i < 50; i++) {
+  Serial.println();
+}
   Serial.begin(115200);
   delay(1000);
 
   // Wifi configuration
-  WiFi.config(camIP, gateway, subnet);
   WiFi.begin(ssid, password);
 
   Serial.print("Connecting to Wi-Fi");
@@ -127,7 +130,7 @@ void loop() {
     // Capture image
     digitalWrite(FLASH_PIN, HIGH);
     camera_fb_t *fb = esp_camera_fb_get();
-    delay(100);
+    delay(10);
     digitalWrite(FLASH_PIN, LOW);
     if (!fb) {
       Serial.println("Failed to capture image");
@@ -140,6 +143,7 @@ void loop() {
 
     // Send image data
     cmd.write(fb->buf, fb->len);
+    cmd.flush();
     cmd.stop();
 
     esp_camera_fb_return(fb);
